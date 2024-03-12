@@ -218,7 +218,7 @@ async def silent():
 async def execute(*message):
     try:
         exec(' '.join(message))
-        print('ㆍ[System] Command Executed Successfully. ( {} )'.format(' '.join(message)))
+        print(f'✔️ Command Executed Successfully. ( {" ".join(message)} )')
     except Exception as e:
         print(e)
 
