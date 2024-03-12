@@ -44,7 +44,7 @@ class DavidChoi(commands.Bot):
         if message.channel == self.curChannel:
             await printChannelHistory(message.channel)
         else:
-            print(f'🔔 [System] 1 Alert on {message.guild.name} - #{message.channel.name}')
+            print(f'🔔 {message.guild.name} - #{message.channel.name}')
             self.recentMessage = message
 
 client = DavidChoi()
@@ -154,7 +154,7 @@ async def reply(idx, *message):
 async def react(idx, emoji):
     try:
         await [message async for message in client.curChannel.history()][max(int(idx) - 1, 0)].add_reaction(emoji)
-        print('ㆍ[System] Successfully Reacted Emoji.')
+        await printChannelHistory(client.curChannel)
     except Exception as e:
         print(e)
 
