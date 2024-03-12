@@ -1,19 +1,18 @@
 import discord
-import sys
 import os
-import base64
 import asyncio
-import copy
 
 from PIL import ImageGrab
 from io import BytesIO
-from typing import Union
 from discord.ext import commands
 from dpyConsole import Console
 
 from datetime import timedelta
 
 from config import APPID, TOKEN
+
+ALIGN = '\n'
+TAB = '\t'
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -23,7 +22,7 @@ class DavidChoi(commands.Bot):
         super().__init__(
             command_prefix='JongPark',
             intents=intents,
-            sync_command=True,
+            sync_command=False,
             application_id=APPID
         )
 
@@ -39,10 +38,13 @@ class DavidChoi(commands.Bot):
         print('Bot is ready.')
     
     async def on_message(self, message: discord.Message) -> None:
+        if self.isSilent:
+            return
+        
         if message.channel == self.curChannel:
             await printChannelHistory(message.channel)
         else:
-            print(f'ㆍ[System] 1 Alert on {message.guild.name} - #{message.channel.name}')
+            print(f'🔔 [System] 1 Alert on {message.guild.name} - #{message.channel.name}')
             self.recentMessage = message
 
 client = DavidChoi()
@@ -64,7 +66,7 @@ async def help():
             status - print status of now selected guild and channel.
             cls - clear the command screen.
 
-            chat - gets the last 50 messages for current channel.
+            chat - gets the last 100 messages for current channel.
 
             silent - if it is on, clear the terminal immediately when sending a chat.
                                           
@@ -116,13 +118,45 @@ async def select(target_name, target_id):
         print('Invalid Command.')
 
 @console.command()
-async def send(*message): 
-    if client.curChannel:
-        async with client.curChannel.typing():
-            await asyncio.sleep(0.5)
-        await client.curChannel.send(' '.join(message))
-    else:
-        print('Channel Do Not Selected.')
+async def send(*message):
+    try: 
+        if client.curChannel:
+            async with client.curChannel.typing():
+                await asyncio.sleep(0.5)
+            await client.curChannel.send(' '.join(map(lambda x: str(eval(x.replace('[eval]', ''))) if x.startswith('[eval]') else x, message)))
+        else:
+            print('Channel Do Not Selected.')
+    except Exception as e:
+        print(e)
+
+@console.command()
+async def mention(idx):
+    try:
+        if client.curChannel:
+            try:
+                await client.curChannel.send(f'<@{[message async for message in client.curChannel.history()][max(int(idx) - 1, 0)].author.id}>')
+            except Exception as e:
+                print(e)
+                print('Cannot Find Member.')
+        else:
+            print('Channel Do Not Selected.')
+    except Exception as e:
+        print(e)
+
+@console.command()
+async def reply(idx, *message):
+    try:
+        await [message async for message in client.curChannel.history()][max(int(idx) - 1, 0)].reply(' '.join(message))
+    except Exception as e:
+        print(e)
+
+@console.command()
+async def react(idx, emoji):
+    try:
+        await [message async for message in client.curChannel.history()][max(int(idx) - 1, 0)].add_reaction(emoji)
+        print('ㆍ[System] Successfully Reacted Emoji.')
+    except Exception as e:
+        print(e)
 
 @console.command()
 async def sendImage():
@@ -133,8 +167,25 @@ async def sendImage():
             await client.curChannel.send(file=discord.File(fp=image_binary, filename='image.png'))
     else:
         print('Channel Do Not Selected.')
-    
 
+@console.command()
+async def embed(*options):
+    try:
+        opt = { option.split('=')[0].strip(): option.split('=')[1].strip() for option in options }
+        if 'title' not in opt:
+            opt['title'] = None
+        if 'description' not in opt:
+            opt['description'] = None
+        if 'url' not in opt:
+            opt['url'] = None
+        if 'color' not in opt:
+            opt['color'] = '#00FF00'
+
+        embed = discord.Embed(title=opt['title'], description=opt['description'], url=opt['url'], color=discord.Color.from_str(opt['color']))
+        embed.set_thumbnail(url='https://i.pinimg.com/236x/6e/ca/57/6eca57905edbc43473b909fa2874c9ab.jpg')
+        await client.curChannel.send(embed=embed)
+    except Exception as e:
+        print(e)
 
 @console.command()
 async def status():
@@ -148,6 +199,10 @@ async def cls():
     os.system('cls')
 
 @console.command()
+async def 친():
+    os.system('cls')
+
+@console.command()
 async def chat():
     if client.curChannel:
         await printChannelHistory(client.curChannel)
@@ -158,6 +213,14 @@ async def chat():
 async def silent():
     client.isSilent = not client.isSilent
     print(f'Silent Mode = {client.isSilent}')
+
+@console.command()
+async def execute(*message):
+    try:
+        exec(' '.join(message))
+        print('ㆍ[System] Command Executed Successfully. ( {} )'.format(' '.join(message)))
+    except Exception as e:
+        print(e)
 
 @console.command()
 async def search(name):
@@ -187,13 +250,17 @@ async def move():
     else:
         print('Didn\'t get any alarm.')
 
-async def printChannelHistory(channel):
-    for message in [message async for message in channel.history(limit=50)][::-1]:
-        print(formatMessage(message))
+async def printChannelHistory(channel: discord.channel.TextChannel):
+    try:
+        for idx, message in reversed(list(enumerate([message async for message in channel.history()]))):
+            print(formatMessage(idx, message))
+    except Exception as e:
+        print(e)
 
-def formatMessage(message: discord.Message) -> str:
-    return f'ㆍ{message.guild.name} #{message.channel.name} {message.author.name}: {message.content} ( {(message.created_at + timedelta(hours=9)).strftime("%Y/%m/%d %H:%M:%S")} ) {list(map(lambda x: x.url, message.attachments)) if message.attachments else ""} {message.stickers}'
+def formatMessage(idx: int, message: discord.Message) -> str:
+    return f'{idx + 1} ㆍ{message.guild.name} #{message.channel.name} {message.author.name}: {message.content}{f"<:{message.stickers[0].name}:{message.stickers[0].id}>" if message.stickers else ""} ( {(message.created_at + timedelta(hours=9)).strftime("%Y/%m/%d %H:%M:%S")} ) {list(map(lambda x: x.url, message.attachments)) if message.attachments else ""} {ALIGN + TAB + "ㄴ " + ", ".join(map(lambda reaction: (reaction.emoji if type(reaction.emoji) == str else f"<:{reaction.emoji.name}:{reaction.emoji.id}>") + f"x{reaction.count}", message.reactions)) if message.reactions else ""}'
     
+
 
 if __name__ == '__main__':
     console.start()
