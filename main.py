@@ -20,9 +20,9 @@ intents.message_content = True
 class DavidChoi(commands.Bot):
     def __init__(self):
         super().__init__(
-            command_prefix='JongPark',
+            command_prefix='a',
             intents=intents,
-            sync_command=False,
+            sync_command=True,
             application_id=APPID
         )
 
