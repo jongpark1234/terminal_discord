@@ -97,7 +97,7 @@ async def select(target_name, target_id):
             client.curGuild = guilds[max(0, guild - 1)]
             client.curChannel = client.curGuild.text_channels[max(0, channel - 1)]
             print(f'Guild and Channel Selected. {client.curGuild.name} - #{client.curChannel.name}')
-        elif int(target_id) < len(guilds): # index expression
+        elif int(target_id) <= len(guilds): # index expression
             target_id = int(target_id)
             client.curGuild = guilds[max(0, target_id - 1)]
             client.curChannel = None
@@ -108,7 +108,7 @@ async def select(target_name, target_id):
     elif 'channel' in target_name or target_name in 'channel':
         target_id = int(target_id)
         channels = client.curGuild.text_channels
-        if target_id < len(channels): # index expression
+        if target_id <= len(channels): # index expression
             client.curChannel = channels[max(0, target_id - 1)]
             print(f'Channel Selected. {client.curChannel.name}')
         else:
