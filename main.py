@@ -28,6 +28,7 @@ class DavidChoi(commands.Bot):
 
         self.curGuild: discord.guild.Guild = None
         self.curChannel: discord.channel.TextChannel = None
+        self.prevChannel: discord.channel.TextChannel = None
         self.isSilent: bool = False
         self.recentMessage: discord.message.Message = None
 
@@ -94,13 +95,11 @@ async def select(target_name, target_id):
         guilds = client.guilds
         if '-' in target_id:
             guild, channel = map(int, target_id.split('-'))
-            client.curGuild = guilds[max(0, guild - 1)]
-            client.curChannel = client.curGuild.text_channels[max(0, channel - 1)]
+            changeChannel(guilds[max(0, guild - 1)].text_channels[max(0, channel - 1)])
             print(f'Guild and Channel Selected. {client.curGuild.name} - #{client.curChannel.name}')
         elif int(target_id) <= len(guilds): # index expression
             target_id = int(target_id)
-            client.curGuild = guilds[max(0, target_id - 1)]
-            client.curChannel = None
+            changeChannel(guilds[max(0, target_id - 1)].text_channels[0])
             print(f'Guild Selected. {client.curGuild.name}')
         else:
             print('Guild Not Found.')
@@ -109,7 +108,7 @@ async def select(target_name, target_id):
         target_id = int(target_id)
         channels = client.curGuild.text_channels
         if target_id <= len(channels): # index expression
-            client.curChannel = channels[max(0, target_id - 1)]
+            changeChannel(channels[max(0, target_id - 1)])
             print(f'Channel Selected. {client.curChannel.name}')
         else:
             print('Channel Not Found.')
@@ -244,11 +243,20 @@ async def search(name):
 @console.command()
 async def move():
     if client.recentMessage:
-        client.curChannel = client.recentMessage.channel
+        changeChannel(client.recentMessage.channel)
         client.recentMessage = None
         await printChannelHistory(client.curChannel)
     else:
         print('Didn\'t get any alarm.')
+
+@console.command()
+async def prev():
+    if client.prevChannel:
+        changeChannel(client.prevChannel)
+        await printChannelHistory(client.curChannel)
+    else:
+        print('There\'s no prev channel.')
+
 
 async def printChannelHistory(channel: discord.channel.TextChannel):
     try:
@@ -258,8 +266,11 @@ async def printChannelHistory(channel: discord.channel.TextChannel):
         print(e)
 
 def formatMessage(idx: int, message: discord.Message) -> str:
-    return f'{idx + 1} ㆍ{message.guild.name} #{message.channel.name} {message.author.name}: {message.content}{f"<:{message.stickers[0].name}:{message.stickers[0].id}>" if message.stickers else ""} ( {(message.created_at + timedelta(hours=9)).strftime("%Y/%m/%d %H:%M:%S")} ) {list(map(lambda x: x.url, message.attachments)) if message.attachments else ""} {ALIGN + TAB + "ㄴ " + ", ".join(map(lambda reaction: (reaction.emoji if type(reaction.emoji) == str else f"<:{reaction.emoji.name}:{reaction.emoji.id}>") + f"x{reaction.count}", message.reactions)) if message.reactions else ""}'
-    
+    return f'{idx + 1} ㆍ{message.guild.name} #{message.channel.name} {message.author.name}: {message.content}{f"<:{message.stickers[0].name}:{message.stickers[0].id}>" if message.stickers else ""} {list(map(lambda x: x.url, message.attachments)) if message.attachments else ""} {ALIGN + TAB + "ㄴ " + ", ".join(map(lambda reaction: (reaction.emoji if type(reaction.emoji) == str else f"<:{reaction.emoji.name}:{reaction.emoji.id}>") + f"x{reaction.count}", message.reactions)) if message.reactions else ""}'
+
+def changeChannel(nextChannel: discord.channel.TextChannel):
+    client.curGuild = nextChannel.guild
+    client.prevChannel, client.curChannel = client.curChannel, nextChannel
 
 
 if __name__ == '__main__':
