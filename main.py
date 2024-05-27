@@ -1,6 +1,7 @@
 import discord
 import os
 import asyncio
+import clipboard
 
 from PIL import ImageGrab
 from io import BytesIO
@@ -29,14 +30,13 @@ class DavidChoi(commands.Bot):
         self.curGuild: discord.guild.Guild = None
         self.curChannel: discord.channel.TextChannel = None
         self.prevChannel: discord.channel.TextChannel = None
-        self.isSilent: bool = False
         self.recentMessage: discord.message.Message = None
+        self.isSilent: bool = False
 
     async def on_ready(self):
         activity = discord.Game('')
         await self.change_presence(status=discord.Status.online, activity=activity)
         os.system('cls')
-        print('Bot is ready.')
     
     async def on_message(self, message: discord.Message) -> None:
         if self.isSilent:
@@ -96,11 +96,11 @@ async def select(target_name, target_id):
         if '-' in target_id:
             guild, channel = map(int, target_id.split('-'))
             changeChannel(guilds[max(0, guild - 1)].text_channels[max(0, channel - 1)])
-            print(f'Guild and Channel Selected. {client.curGuild.name} - #{client.curChannel.name}')
+            await printChannelHistory(client.curChannel)
         elif int(target_id) <= len(guilds): # index expression
             target_id = int(target_id)
             changeChannel(guilds[max(0, target_id - 1)].text_channels[0])
-            print(f'Guild Selected. {client.curGuild.name}')
+            await printChannelHistory(client.curChannel)
         else:
             print('Guild Not Found.')
 
@@ -109,7 +109,7 @@ async def select(target_name, target_id):
         channels = client.curGuild.text_channels
         if target_id <= len(channels): # index expression
             changeChannel(channels[max(0, target_id - 1)])
-            print(f'Channel Selected. {client.curChannel.name}')
+            await printChannelHistory(client.curChannel)
         else:
             print('Channel Not Found.')
 
@@ -168,6 +168,13 @@ async def sendImage():
         print('Channel Do Not Selected.')
 
 @console.command()
+async def paste():
+    if client.curChannel:
+        await client.curChannel.send(clipboard.paste())
+    else:
+        print('Channel Do Not Selected.')
+
+@console.command()
 async def embed(*options):
     try:
         opt = { option.split('=')[0].strip(): option.split('=')[1].strip() for option in options }
@@ -211,7 +218,8 @@ async def chat():
 @console.command()
 async def silent():
     client.isSilent = not client.isSilent
-    print(f'Silent Mode = {client.isSilent}')
+    os.system('cls')
+    print(client.isSilent)
 
 @console.command()
 async def execute(*message):
@@ -257,7 +265,17 @@ async def prev():
     else:
         print('There\'s no prev channel.')
 
-
+@console.command()
+async def splash(*msg):
+    try:
+        msg = ' '.join(msg)
+        for channel in client.curGuild.text_channels:
+            if channel.permissions_for(client.curGuild.me).send_messages:
+                await channel.send(msg)
+    except Exception as e:
+        print(e)
+    
+    
 async def printChannelHistory(channel: discord.channel.TextChannel):
     try:
         for idx, message in reversed(list(enumerate([message async for message in channel.history()]))):
@@ -265,13 +283,13 @@ async def printChannelHistory(channel: discord.channel.TextChannel):
     except Exception as e:
         print(e)
 
+
 def formatMessage(idx: int, message: discord.Message) -> str:
     return f'{idx + 1} ㆍ{message.guild.name} #{message.channel.name} {message.author.name}: {message.content}{f"<:{message.stickers[0].name}:{message.stickers[0].id}>" if message.stickers else ""} {list(map(lambda x: x.url, message.attachments)) if message.attachments else ""} {ALIGN + TAB + "ㄴ " + ", ".join(map(lambda reaction: (reaction.emoji if type(reaction.emoji) == str else f"<:{reaction.emoji.name}:{reaction.emoji.id}>") + f"x{reaction.count}", message.reactions)) if message.reactions else ""}'
 
 def changeChannel(nextChannel: discord.channel.TextChannel):
     client.curGuild = nextChannel.guild
     client.prevChannel, client.curChannel = client.curChannel, nextChannel
-
 
 if __name__ == '__main__':
     console.start()
