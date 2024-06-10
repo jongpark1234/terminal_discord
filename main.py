@@ -271,7 +271,13 @@ async def splash(*msg):
         msg = ' '.join(msg)
         for channel in client.curGuild.text_channels:
             if channel.permissions_for(client.curGuild.me).send_messages:
-                await channel.send(msg)
+                if msg == '[Image]':
+                    with BytesIO() as image_binary:
+                        ImageGrab.grabclipboard().save(image_binary, 'PNG')
+                        image_binary.seek(0)            
+                        await channel.send(file=discord.File(fp=image_binary, filename='image.png'))
+                else:
+                    await channel.send(msg)
     except Exception as e:
         print(e)
     
