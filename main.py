@@ -129,6 +129,26 @@ async def send(*message):
         print(e)
 
 @console.command()
+async def sticker(name):
+    try:
+        if client.curChannel:
+            sticker = [x.id for x in client.stickers if name in x.name.lower()][0]
+
+            if not sticker:
+                print('There is no sticker.')
+                return
+            
+            sticker = await discord.Client.fetch_sticker(client, sticker)
+
+            await client.curChannel.send(stickers=(sticker, sticker))
+        
+        else:
+            print('Channel Do Not Selected.')
+
+    except Exception as e:
+        print(e)
+
+@console.command()
 async def mention(idx):
     try:
         if client.curChannel:
