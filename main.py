@@ -3,7 +3,7 @@ import os
 import asyncio
 import clipboard
 
-from PIL import ImageGrab
+from PIL import ImageGrab, Image
 from io import BytesIO
 from discord.ext import commands
 from dpyConsole import Console
@@ -179,13 +179,27 @@ async def react(idx, emoji):
 
 @console.command()
 async def sendImage():
-    if client.curChannel:
-        with BytesIO() as image_binary:
-            ImageGrab.grabclipboard().save(image_binary, 'PNG')
-            image_binary.seek(0)            
-            await client.curChannel.send(file=discord.File(fp=image_binary, filename='image.png'))
-    else:
-        print('Channel Do Not Selected.')
+    try:
+        if client.curChannel:
+            with BytesIO() as image_binary:
+                clipboard_data = ImageGrab.grabclipboard()
+
+                # 클립보드 데이터가 리스트형식일 경우
+                if isinstance(clipboard_data, list):
+
+                    # 리스트의 첫 번째 항목이 파일 경로인지 확인
+                    if len(clipboard_data) > 0 and os.path.isfile(clipboard_data[0]):
+
+                        # 파일 경로를 사용하여 이미지를 엶
+                        clipboard_data = Image.open(clipboard_data[0])
+
+                clipboard_data.save(image_binary, 'PNG')
+                image_binary.seek(0)            
+                await client.curChannel.send(file=discord.File(fp=image_binary, filename='image.png'))
+        else:
+            print('Channel Do Not Selected.')
+    except Exception as e:
+        print(e)
 
 @console.command()
 async def paste():
