@@ -178,7 +178,7 @@ async def react(idx, emoji):
         print(e)
 
 @console.command()
-async def sendImage():
+async def sendImage(*msg):
     try:
         if client.curChannel:
             with BytesIO() as image_binary:
@@ -195,7 +195,7 @@ async def sendImage():
 
                 clipboard_data.save(image_binary, 'PNG')
                 image_binary.seek(0)            
-                await client.curChannel.send(file=discord.File(fp=image_binary, filename='image.png'))
+                await client.curChannel.send(''.join(msg), file=discord.File(fp=image_binary, filename='image.png'))
         else:
             print('Channel Do Not Selected.')
     except Exception as e:
@@ -325,7 +325,7 @@ async def printChannelHistory(channel: discord.channel.TextChannel):
 
 
 def formatMessage(idx: int, message: discord.Message) -> str:
-    return f'{idx + 1} ㆍ{message.guild.name} #{message.channel.name} {message.author.name}: {message.content}{f"<:{message.stickers[0].name}:{message.stickers[0].id}>" if message.stickers else ""} {list(map(lambda x: x.url, message.attachments)) if message.attachments else ""} {ALIGN + TAB + "ㄴ " + ", ".join(map(lambda reaction: (reaction.emoji if type(reaction.emoji) == str else f"<:{reaction.emoji.name}:{reaction.emoji.id}>") + f"x{reaction.count}", message.reactions)) if message.reactions else ""}'
+    return f'{idx + 1} ㆍ{message.guild.name} #{message.channel.name} {message.author.name}: {message.content}{f"<:{message.stickers[0].name}:{message.stickers[0].id}>" if message.stickers else ""} {list(map(lambda x: x.url, message.attachments)) if message.attachments else ""} {ALIGN + TAB + "ㄴ " + ", ".join(map(lambda reaction: (reaction.emoji if type(reaction.emoji) == str else f"<:{reaction.emoji.name}:{reaction.emoji.id}>") + f"x{reaction.count}", message.reactions)) if message.reactions else ""}'.replace('보추', '니찬테')
 
 def changeChannel(nextChannel: discord.channel.TextChannel):
     client.curGuild = nextChannel.guild
